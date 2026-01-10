@@ -1,0 +1,79 @@
+version: '3.9'
+
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:16-alpine
+    container_name: todolist_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todolist
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Персистентное хранилище данных
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - todolist_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # API приложение
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todolist_api
+    environment:
+      # Конфигурация приложения
+      APP_NAME: GoToDoList
+      APP_VERSION: 1.0.0
+      APP_PORT: 8080
+      APP_DEBUG: "true"
+
+      # Конфигурация базы данных
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: todolist
+      DB_SSLMODE: disable
+      DB_MAX_IDLE_CONNS: 10
+      DB_MAX_OPEN_CONNS: 100
+      DB_CONN_MAX_LIFETIME: 5
+    ports:
+      - "8080:8080"
+    networks:
+      - todolist_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Adminer - веб-интерфейс для управления БД (опционально, для development)
+  adminer:
+    image: adminer:latest
+    container_name: todolist_adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - todolist_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+networks:
+  todolist_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
