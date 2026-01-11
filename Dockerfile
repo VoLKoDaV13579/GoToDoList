@@ -1,7 +1,7 @@
 # Многоступенчатая сборка (multi-stage build) для оптимизации размера образа
 
 # Стадия 1: Сборка приложения
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
